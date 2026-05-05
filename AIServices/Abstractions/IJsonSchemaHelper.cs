@@ -1,5 +1,8 @@
 namespace AIServices.Abstractions;
 
+/// <summary>
+/// Provides JSON schema generation helpers for strongly typed AI responses.
+/// </summary>
 public interface IJsonSchemaHelper
 {
     /// <summary>

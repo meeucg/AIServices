@@ -1,5 +1,8 @@
 ﻿namespace AIServices.Abstractions;
 
+/// <summary>
+/// Represents a validator that can report the model type it validates for AI requests or responses.
+/// </summary>
 public interface IValidatorForAI
 {
     /// <summary>
@@ -9,6 +12,10 @@ public interface IValidatorForAI
     Type GetValidatorType();
 }
 
+/// <summary>
+/// Validates values of a specific type before or after AI processing.
+/// </summary>
+/// <typeparam name="T">The type validated by this validator.</typeparam>
 public interface IValidatorForAI<in T> : IValidatorForAI
 {
     /// <summary>

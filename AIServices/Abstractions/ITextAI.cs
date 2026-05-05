@@ -3,6 +3,9 @@ using AIServices.Models;
 
 namespace AIServices.Abstractions;
 
+/// <summary>
+/// Provides text-based AI completion operations for one-shot prompts and chat conversations.
+/// </summary>
 public interface ITextAI
 {
     /// <summary>
