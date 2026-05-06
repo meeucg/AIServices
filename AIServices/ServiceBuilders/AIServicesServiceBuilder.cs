@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -30,8 +31,8 @@ public static class AIServicesServiceBuilder
         services.AddOptions<TextAIOptions>()
             .Bind(textAIOptionsSection);
 
-        services.AddOptions<AIModelsOptions>()
-            .Bind(aiModelsOptionsSection);
+        services.AddSingleton<IOptions<AIModelsOptions>>(_ =>
+            Options.Create(BindAIModelsOptions(aiModelsOptionsSection)));
 
         var aiJsonOptionsBuilder = services.AddOptions<AIJsonOptions>();
 
@@ -54,8 +55,7 @@ public static class AIServicesServiceBuilder
         IServiceCollection services,
         IConfigurationSection aiModelsOptionsSection)
     {
-        var aiModelsOptions = aiModelsOptionsSection.Get<AIModelsOptions>()
-                              ?? throw new InvalidOperationException("AIModelsOptions configuration section is invalid.");
+        var aiModelsOptions = BindAIModelsOptions(aiModelsOptionsSection);
 
         var allModels = new List<AIModel> { aiModelsOptions.DefaultModel };
         
@@ -72,6 +72,98 @@ public static class AIServicesServiceBuilder
                 sp.GetRequiredService<IOptions<TextAIOptions>>(),
                 model,
                 sp.GetService<ILogger<TextAI>>()));
+        }
+    }
+
+    private static AIModelsOptions BindAIModelsOptions(IConfigurationSection aiModelsOptionsSection)
+    {
+        var defaultModelSection = aiModelsOptionsSection.GetSection(nameof(AIModelsOptions.DefaultModel));
+
+        if (!defaultModelSection.Exists())
+            throw new InvalidOperationException("Default AI model configuration section is missing.");
+
+        return new AIModelsOptions
+        {
+            DefaultModel = BindAIModel(defaultModelSection),
+            AlternativeModels = aiModelsOptionsSection
+                .GetSection(nameof(AIModelsOptions.AlternativeModels))
+                .GetChildren()
+                .Select(BindAIModel)
+                .ToList()
+        };
+    }
+
+    private static AIModel BindAIModel(IConfigurationSection aiModelSection)
+    {
+        return new AIModel
+        {
+            ModelAlias = aiModelSection[nameof(AIModel.ModelAlias)]
+                         ?? throw new InvalidOperationException("AI model alias is missing."),
+            ModelName = aiModelSection[nameof(AIModel.ModelName)]
+                        ?? throw new InvalidOperationException("AI model name is missing."),
+            SupportsJsonOutput = aiModelSection.GetValue<bool>(nameof(AIModel.SupportsJsonOutput)),
+            SupportsFunctionCalling = aiModelSection.GetValue<bool>(nameof(AIModel.SupportsFunctionCalling)),
+            RequestBodyExtensions = BindJsonObject(
+                aiModelSection.GetSection(nameof(AIModel.RequestBodyExtensions)))
+        };
+    }
+
+    private static JsonObject BindJsonObject(IConfigurationSection section)
+    {
+        var result = new JsonObject();
+
+        foreach (var child in section.GetChildren())
+            result[child.Key] = BindJsonNode(child);
+
+        return result;
+    }
+
+    private static JsonNode? BindJsonNode(IConfigurationSection section)
+    {
+        var children = section.GetChildren().ToList();
+
+        if (children.Count == 0)
+            return BindJsonValue(section.Value);
+
+        if (children.All(child => int.TryParse(child.Key, out _)))
+        {
+            var array = new JsonArray();
+
+            foreach (var child in children.OrderBy(child => int.Parse(child.Key)))
+                array.Add(BindJsonNode(child));
+
+            return array;
+        }
+
+        var obj = new JsonObject();
+
+        foreach (var child in children)
+            obj[child.Key] = BindJsonNode(child);
+
+        return obj;
+    }
+
+    private static JsonNode? BindJsonValue(string? value)
+    {
+        if (value is null)
+            return null;
+
+        if (bool.TryParse(value, out var boolValue))
+            return JsonValue.Create(boolValue);
+
+        if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var longValue))
+            return JsonValue.Create(longValue);
+
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var doubleValue))
+            return JsonValue.Create(doubleValue);
+
+        try
+        {
+            return JsonNode.Parse(value);
+        }
+        catch (JsonException)
+        {
+            return JsonValue.Create(value);
         }
     }
 

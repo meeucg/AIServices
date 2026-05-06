@@ -29,14 +29,16 @@ Add text AI and model configuration to your application settings.
       "ModelAlias": "default",
       "ModelName": "<openai-chat-model>",
       "SupportsJsonOutput": true,
-      "SupportsFunctionCalling": false
+      "SupportsFunctionCalling": false,
+      "RequestBodyExtensions": {}
     },
     "AlternativeModels": [
       {
         "ModelAlias": "fast",
         "ModelName": "<openai-chat-model>",
         "SupportsJsonOutput": true,
-        "SupportsFunctionCalling": false
+        "SupportsFunctionCalling": false,
+        "RequestBodyExtensions": {}
       }
     ]
   }
@@ -185,6 +187,32 @@ var result = await fastAI.OneShotResponse("Summarize today's workout plan.");
 ```
 
 The unkeyed `ITextAI` uses `AIModels:DefaultModel`.
+
+## Additional Request JSON
+
+Some OpenAI-compatible providers expose request fields before the SDK has first-class options for them. Add those fields to `RequestBodyExtensions` on the model configuration. The value can be a nested JSON object or array, not only flat key-value pairs.
+
+```json
+{
+  "AIModels": {
+    "DefaultModel": {
+      "ModelAlias": "GPT-OSS 120B",
+      "ModelName": "openai/gpt-oss-120b",
+      "SupportsJsonOutput": true,
+      "SupportsFunctionCalling": true,
+      "RequestBodyExtensions": {
+        "reasoning_effort": "minimal",
+        "metadata": {
+          "source": "fitflow",
+          "features": ["typed-output", "interview"]
+        }
+      }
+    }
+  }
+}
+```
+
+`TextAI` builds requests through the OpenAI SDK protocol method so these extra fields are merged into the final JSON body while SDK models still serialize chat messages and typed JSON response formats.
 
 ## JSON Options
 

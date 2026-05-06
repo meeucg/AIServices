@@ -130,6 +130,7 @@ Properties:
 - `ModelName`: Gets the provider-specific model name sent to the AI service.
 - `SupportsJsonOutput`: Gets a value indicating whether the model can produce JSON-formatted output.
 - `SupportsFunctionCalling`: Gets a value indicating whether the model supports function calling.
+- `RequestBodyExtensions`: Gets additional JSON fields that should be merged into the OpenAI request body for this model.
 
 ### `AIServices.Models.ChatInitialState`
 

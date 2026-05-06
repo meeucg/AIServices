@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace AIServices.Models;
 
 /// <summary>
@@ -24,4 +26,9 @@ public record AIModel
     /// Gets a value indicating whether the model supports function calling.
     /// </summary>
     public bool SupportsFunctionCalling { get; init; }
+
+    /// <summary>
+    /// Gets additional JSON fields that should be merged into the OpenAI request body for this model.
+    /// </summary>
+    public JsonObject RequestBodyExtensions { get; init; } = [];
 }

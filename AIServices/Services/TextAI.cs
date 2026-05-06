@@ -1,4 +1,5 @@
-﻿using System.ClientModel;
+using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Text.Json;
 using AIServices.Abstractions;
 using AIServices.Entities;
@@ -74,14 +75,39 @@ public class TextAI : ITextAI
         return result;
     }
 
+    private async Task<string?> CompleteChatProtocolAsync(
+        IReadOnlyList<ChatMessage> messages,
+        ChatResponseFormat? responseFormat = null,
+        CancellationToken ct = default)
+    {
+        using var content = TextAIBinaryHelper.GetBinaryRequest(
+            _model,
+            messages,
+            _jsonSerOpt,
+            responseFormat,
+            ct);
+
+        var result = await _client.CompleteChatAsync(
+            content,
+            new RequestOptions
+            {
+                CancellationToken = ct
+            });
+
+        return TextAIBinaryHelper.GetRawResponseFromBinary(
+            result.GetRawResponse().Content,
+            ct);
+    }
+
     private async Task<TextAIResponse<string>> TryCompleteChat(
         TextAIRequest request, CancellationToken ct = default)
     {
         var convertedHistory = ConvertChatMessages(request.ChatContext);
-        
         convertedHistory.Add(new UserChatMessage(request.RequestText));
-        var response = (await _client.CompleteChatAsync(
-            convertedHistory, cancellationToken: ct)).Value.Content[0].Text;
+
+        var response = await CompleteChatProtocolAsync(
+            convertedHistory,
+            ct: ct);
 
         return new TextAIResponse<string>
         {
@@ -97,16 +123,16 @@ public class TextAI : ITextAI
         if(!_model.SupportsJsonOutput) return TextAIResponse<T>.NullResponse;
         var convertedHistory = ConvertChatMessages(request.ChatContext);
         convertedHistory.Add(new UserChatMessage(request.RequestText));
-        
-        var response = (await _client.CompleteChatAsync(
-            convertedHistory, 
-            new ChatCompletionOptions
-            {
-                ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
-                    typeof(T).Name + "Scheme",
-                    _jsonSchemaHelper.GetBinaryJsonScheme<T>(),
-                    jsonSchemaIsStrict: true)
-            }, ct)).Value.Content[0].Text;
+
+        var responseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
+            typeof(T).Name + "Scheme",
+            _jsonSchemaHelper.GetBinaryJsonScheme<T>(),
+            jsonSchemaIsStrict: true);
+
+        var response = await CompleteChatProtocolAsync(
+            convertedHistory,
+            responseFormat,
+            ct);
         
         if(response == null) return TextAIResponse<T>.NullResponse;
         var result = JsonSerializer.Deserialize<T>(response, _jsonSerOpt);
