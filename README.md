@@ -141,6 +141,8 @@ if (result is { IsSuccess: true, Response: not null })
 
 `DescriptionAttribute` values are included in generated JSON schemas by the default JSON configuration.
 
+Generated schemas are cached per response type. The cache stores both the JSON string and `BinaryData` representation, so repeated typed calls for the same `T` reuse the same schema payload.
+
 ## Validators
 
 Register validators when typed AI responses need extra application-level validation. If a validator is registered for `T`, `TextAI` runs it before returning a successful typed result.

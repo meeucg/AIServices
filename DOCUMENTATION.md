@@ -12,17 +12,19 @@ Generated from the project's XML documentation summaries.
 
 Provides JSON schema generation helpers for strongly typed AI responses.
 
+Generated schemas are cached per response type by the default `JsonSchemaHelper` implementation. The cached entry contains both the JSON string and `BinaryData` form so repeated typed completions do not regenerate schemas.
+
 #### `GetJsonScheme<T>()`
 
 Uses `JsonSerializationOptions` and `JsonSchemaExporterOptions` registered as `IOptions` from dependency injection. Configure those options to change behavior.
 
-Returns a JSON schema for type `T`.
+Returns a cached JSON schema for type `T`.
 
 #### `GetBinaryJsonScheme<T>()`
 
 Same as `GetJsonScheme`, but returns `BinaryData`. Useful for the OpenAI SDK.
 
-Returns a JSON schema for type `T` in `BinaryData` format.
+Returns a cached JSON schema for type `T` in `BinaryData` format.
 
 ### `AIServices.Abstractions.ITextAI`
 
